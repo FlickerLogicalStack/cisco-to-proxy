@@ -1,0 +1,6 @@
+.env
+.env.bak*
+certs/
+*.p12
+*.pem
+*.key

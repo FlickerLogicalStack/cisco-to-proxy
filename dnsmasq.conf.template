@@ -1,0 +1,25 @@
+# dnsmasq for vpn-gateway (template, rendered by entrypoint.sh)
+#
+# Purpose: resolve corporate domains through corporate resolvers (reachable
+# only from inside the tunnel) and everything else through the home resolver.
+# This keeps external lookups from leaking into the corporate DNS while
+# internal names keep working.
+
+listen-address=127.0.0.1
+bind-interfaces
+port=53
+pid-file=/run/vpn/dnsmasq.pid
+
+no-resolv
+no-hosts
+no-poll
+
+cache-size=1000
+# don't cache longer than 5 minutes so internal host moves are picked up
+max-cache-ttl=300
+
+# default — home resolver
+server=@HOME_DNS@
+
+# server=/<corp-domain>/<corp-dns> lines are appended by entrypoint.sh from
+# the CORP_DOMAINS and CORP_DNS variables

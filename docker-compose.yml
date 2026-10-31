@@ -1,0 +1,60 @@
+services:
+  vpn-gateway:
+    build: .
+    image: cisco-to-proxy/vpn-gateway:latest
+    container_name: vpn-gateway
+    restart: unless-stopped
+
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+
+    # DNS queries go to dnsmasq inside the container (split DNS)
+    dns:
+      - 127.0.0.1
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./certs:/certs:ro
+
+    # Same port numbers inside and outside on purpose: one number, one meaning.
+    #   1082 — HTTP CONNECT only
+    #   1083 — SOCKS5 only
+    #   1084 — auto (SOCKS5 or HTTP, detected per connection)
+    ports:
+      # code on the host itself (bare process) -> 127.0.0.1
+      - "127.0.0.1:1082:1082"
+      - "127.0.0.1:1083:1083"
+      - "127.0.0.1:1084:1084"
+      # code from other LAN machines -> host LAN address (BIND_IP in .env)
+      - "${BIND_IP:-127.0.0.1}:1082:1082"
+      - "${BIND_IP:-127.0.0.1}:1083:1083"
+      - "${BIND_IP:-127.0.0.1}:1084:1084"
+
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+    stop_grace_period: 10s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Uncomment if consumer containers need to reach the gateway by name
+    # (socks5h://user:pass@vpn-gateway:1082) instead of the host IP.
+    # networks:
+    #   - default
+    #   - shared
+
+# networks:
+#   shared:
+#     external: true
